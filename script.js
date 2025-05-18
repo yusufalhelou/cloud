@@ -29,6 +29,8 @@ class TagsCloud {
   #rotationAngle;
   #rotationSpeed;
   #frameRequestId;
+  #autoRotate;
+  #idleTime;
 
   constructor(root) {
     this.#root = root;
@@ -38,6 +40,8 @@ class TagsCloud {
     this.#rotationAxis = [1, 0, 0];
     this.#rotationAngle = 0;
     this.#rotationSpeed = 0;
+    this.#autoRotate = true;
+    this.#idleTime = 0;
 
     this.#updatePositions();
     this.#initEventListeners();
@@ -47,6 +51,7 @@ class TagsCloud {
   #initEventListeners() {
     window.addEventListener('resize', this.#updatePositions.bind(this));
     document.addEventListener('mousemove', this.#onMouseMove.bind(this));
+    document.addEventListener('touchmove', this.#onTouchMove.bind(this), { passive: true });
   }
 
   #updatePositions() {
@@ -106,6 +111,9 @@ class TagsCloud {
   }
 
   #onMouseMove(e) {
+    this.#autoRotate = false;
+    this.#idleTime = 0;
+    
     const rootRect = this.#root.getBoundingClientRect();
     const deltaX = e.clientX - (rootRect.left + this.#root.offsetWidth / 2);
     const deltaY = e.clientY - (rootRect.top + this.#root.offsetHeight / 2);
@@ -118,8 +126,39 @@ class TagsCloud {
     this.#rotationSpeed = speed;
   }
 
+  #onTouchMove(e) {
+    this.#autoRotate = false;
+    this.#idleTime = 0;
+    
+    const touch = e.touches[0];
+    const rootRect = this.#root.getBoundingClientRect();
+    const deltaX = touch.clientX - (rootRect.left + this.#root.offsetWidth / 2);
+    const deltaY = touch.clientY - (rootRect.top + this.#root.offsetHeight / 2);
+    const a = Math.atan2(deltaX, deltaY) - Math.PI / 2;
+    const axis = [Math.sin(a), Math.cos(a), 0];
+    const delta = Math.sqrt(deltaX ** 2 + deltaY ** 2);
+    const speed = delta / Math.max(window.innerHeight, window.innerWidth) / 20;
+
+    this.#rotationAxis = axis;
+    this.#rotationSpeed = speed;
+  }
+
   #update() {
     this.#rotationAngle += this.#rotationSpeed;
+    
+    // Auto-rotation when idle
+    if (this.#autoRotate) {
+      this.#idleTime += 0.016; // ~60fps frame time
+      if (this.#idleTime > 2) { // After 2 seconds idle
+        this.#rotationSpeed = 0.005;
+        this.#rotationAxis = [
+          Math.sin(this.#idleTime * 0.5) * 0.5,
+          Math.cos(this.#idleTime * 0.3) * 0.5,
+          Math.sin(this.#idleTime * 0.2) * 0.5
+        ];
+      }
+    }
+
     this.#updatePositions();
     this.#frameRequestId = requestAnimationFrame(this.#update.bind(this));
   }
@@ -133,7 +172,7 @@ class TagsCloud {
   }
 }
 
-// Initialize Gradient Bubble
+// Gradient Bubble Animation
 const interBubble = document.querySelector('.interactive');
 let curX = 0;
 let curY = 0;
@@ -147,15 +186,24 @@ function moveBubble() {
   requestAnimationFrame(moveBubble);
 }
 
-// Start Animations
+// Initialize Everything
 document.addEventListener('DOMContentLoaded', () => {
   const cloud = new TagsCloud(document.querySelector('.tags'));
   cloud.start();
 
-  window.addEventListener('mousemove', (e) => {
-    tgX = e.clientX;
-    tgY = e.clientY;
-  });
+  // Mouse/Touch events for gradient bubble
+  const handlePointerMove = (e) => {
+    const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+    const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+    
+    if (clientX && clientY) {
+      tgX = clientX;
+      tgY = clientY;
+    }
+  };
+
+  window.addEventListener('mousemove', handlePointerMove);
+  window.addEventListener('touchmove', handlePointerMove, { passive: true });
 
   moveBubble();
 });
