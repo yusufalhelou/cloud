@@ -12,7 +12,6 @@
   --color-interactive: 10, 100, 111;
   --circle-size: 80%;
   --blending: hard-light;
-  --base-font-size: 5vmin;
 }
 
 * {
@@ -49,20 +48,20 @@ body {
   position: absolute;
   top: 50%;
   left: 50%;
-  font-size: var(--base-font-size);
+  font-size: 5vmin;
   font-weight: bold;
-  transition: 
-    transform 0.5s linear, 
-    opacity 0.5s linear,
-    font-size 0.3s ease;
+  transition: transform 0.5s linear, opacity 0.5s linear;
   z-index: 3;
-  transform-origin: center center;
 }
 
 .tag > .box {
   display: inline-block;
   transform: translateX(-50%) translateY(-50%);
-  white-space: nowrap;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 /* Gradient Background Styles */
@@ -100,7 +99,6 @@ body {
   top: calc(50% - var(--circle-size) / 2);
   left: calc(50% - var(--circle-size) / 2);
   opacity: 1;
-  will-change: transform;
 }
 
 .g1 {
@@ -147,13 +145,6 @@ body {
   top: -50%;
   left: -50%;
   opacity: 0.7;
-  will-change: transform;
-}
-
-/* Animations */
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
 }
 
 @keyframes moveInCircle {
