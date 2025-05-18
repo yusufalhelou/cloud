@@ -43,23 +43,9 @@ class TagsCloud {
     this.#autoRotate = true;
     this.#idleTime = 0;
 
-    this.#normalizeFontSizes();
     this.#updatePositions();
     this.#initEventListeners();
     this.#root.classList.add('-loaded');
-  }
-
-  #normalizeFontSizes() {
-    const tags = Array.from(this.#tags);
-    const lengths = tags.map(tag => tag.textContent.trim().length);
-    const maxLength = Math.max(...lengths);
-    
-    tags.forEach(tag => {
-      const length = tag.textContent.trim().length;
-      // Inverse logarithmic scaling (shorter words get larger)
-      const scaleFactor = 1.5 - Math.log(length + 1) / Math.log(maxLength + 1);
-      tag.dataset.size = scaleFactor.toFixed(2);
-    });
   }
 
   #initEventListeners() {
@@ -96,22 +82,28 @@ class TagsCloud {
     const N = this.#tags.length;
 
     for (let i = 0; i < N; i++) {
-      const [x, y, z] = this.#sphere.points[i];
-      
-      const transformedX = rotationMatrix[0][0] * x + rotationMatrix[0][1] * y + rotationMatrix[0][2] * z;
-      const transformedY = rotationMatrix[1][0] * x + rotationMatrix[1][1] * y + rotationMatrix[1][2] * z;
-      const transformedZ = rotationMatrix[2][0] * x + rotationMatrix[2][1] * y + rotationMatrix[2][2] * z;
+      const x = this.#sphere.points[i][0];
+      const y = this.#sphere.points[i][1];
+      const z = this.#sphere.points[i][2];
+
+      const transformedX =
+        rotationMatrix[0][0] * x +
+        rotationMatrix[0][1] * y +
+        rotationMatrix[0][2] * z;
+      const transformedY =
+        rotationMatrix[1][0] * x +
+        rotationMatrix[1][1] * y +
+        rotationMatrix[1][2] * z;
+      const transformedZ =
+        rotationMatrix[2][0] * x +
+        rotationMatrix[2][1] * y +
+        rotationMatrix[2][2] * z;
 
       const translateX = (this.#size * transformedX) / 2;
       const translateY = (this.#size * transformedY) / 2;
-      
-      // Combine depth scaling with length-based scaling
-      const depthScale = (transformedZ + 2) / 3;
-      const lengthScale = parseFloat(this.#tags[i].dataset.size);
-      const combinedScale = depthScale * lengthScale;
-      
+      const scale = (transformedZ + 2) / 3;
+      const transform = `translateX(${translateX}px) translateY(${translateY}px) scale(${scale})`;
       const opacity = (transformedZ + 1.5) / 2.5;
-      const transform = `translateX(${translateX}px) translateY(${translateY}px) scale(${combinedScale})`;
 
       this.#tags[i].style.transform = transform;
       this.#tags[i].style.opacity = opacity;
@@ -156,8 +148,8 @@ class TagsCloud {
     
     // Auto-rotation when idle
     if (this.#autoRotate) {
-      this.#idleTime += 0.016;
-      if (this.#idleTime > 2) {
+      this.#idleTime += 0.016; // ~60fps frame time
+      if (this.#idleTime > 2) { // After 2 seconds idle
         this.#rotationSpeed = 0.005;
         this.#rotationAxis = [
           Math.sin(this.#idleTime * 0.5) * 0.5,
@@ -173,6 +165,10 @@ class TagsCloud {
 
   start() {
     this.#update();
+  }
+
+  stop() {
+    cancelAnimationFrame(this.#frameRequestId);
   }
 }
 
@@ -195,9 +191,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const cloud = new TagsCloud(document.querySelector('.tags'));
   cloud.start();
 
+  // Mouse/Touch events for gradient bubble
   const handlePointerMove = (e) => {
-    const clientX = e.clientX || (e.touches?.[0]?.clientX);
-    const clientY = e.clientY || (e.touches?.[0]?.clientY);
+    const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+    const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+    
     if (clientX && clientY) {
       tgX = clientX;
       tgY = clientY;
